@@ -1,0 +1,22 @@
+services:
+
+  chat-tts:
+    build:
+      context: .
+    tty: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HOME=/app/model/
+    ports:
+      - "8000:8000"
+    deploy:
+      mode: global
+      # resources:
+      #   reservations:
+      #     devices:
+      #       - driver: nvidia
+      #         count: 1
+      #         capabilities: [gpu]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/codespace/.cache/huggingface/hub:/app/model/
