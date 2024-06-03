@@ -19,4 +19,4 @@ services:
       #         capabilities: [gpu]
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/codespace/.cache/huggingface/hub:/app/model/
+      - /home/codespace/.cache/huggingface:/app/model/
