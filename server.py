@@ -18,23 +18,64 @@ chat = ChatTTS.Chat()
 chat.load_models()
 chat.infer("hello")
 
-class TextsInput(BaseModel):
-    texts: list[str]
-    params_infer_code: dict
-    params_refine_text: dict
+def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_input, refine_text_flag, spk_emb=None):
+
+    torch.manual_seed(audio_seed_input)
+    if not spk_emb:
+        spk_emb = chat.sample_random_speaker()
+
+    params_infer_code = {
+        'spk_emb': spk_emb, 
+        'temperature': temperature,
+        'top_P': top_P,
+        'top_K': top_K,
+        }
+    params_refine_text = {'prompt': '[oral_2][laugh_0][break_6]'}
+    
+    torch.manual_seed(text_seed_input)
+
+    if refine_text_flag:
+        text = chat.infer(text, 
+                          skip_refine_text=False,
+                          refine_text_only=True,
+                          params_refine_text=params_refine_text,
+                          params_infer_code=params_infer_code
+                          )
+    
+    wav = chat.infer(text, 
+                     skip_refine_text=True, 
+                     params_refine_text=params_refine_text, 
+                     params_infer_code=params_infer_code
+                     )
+    
+    sample_rate = 24000
+
+    return sample_rate, spk_emb, wav
+
+class TTSInput(BaseModel):
+    text: list[str]
+    temperature: float=0.3
+    top_P: float=0.7
+    top_K: int=20
+    audio_seed_input: int=2
+    text_seed_input: int=2
+    refine_text_flag: bool=True
+    spk_emb: bytes=None
 
 @app.post("/tts", response_class=JSONResponse)
-async def tts(input: TextsInput):
-    if not input.texts:
+async def tts(input: TTSInput):
+    if not input.text:
         raise HTTPException(status_code=400, detail="List of texts is required")
     
     try:
         # Use chatTTS to generate speech
-        wavs = chat.infer(input.texts, 
-                          params_refine_text=input.params_refine_text, 
-                          params_infer_code=input.params_infer_code)
+        if input.spk_emb:
+            input.spk_emb = pickle.loads(input.spk_emb)
+        sample_rate, spk_emb, wavs = generate_audio(**dict(input))
         
-        return {"wavs": [base64.b64encode(wav.tobytes()).decode('utf-8') for wav in wavs]}
+        return {"wavs": [base64.b64encode(wav.tobytes()).decode('utf-8') for wav in wavs],
+                "spk_emb": pickle.dumps(spk_emb), #.cpu().detach().numpy().tolist(),
+                "sample_rate": sample_rate}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

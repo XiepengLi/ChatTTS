@@ -8,4 +8,5 @@ vocos
 IPython
 nemo_text_processing
 fastapi
-pynini # conda install -y -c conda-forge pynini
+pynini # conda install -y -c conda-forge pynini=2.1.5
+WeTextProcessing # for zh
