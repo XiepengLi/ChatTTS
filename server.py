@@ -22,7 +22,7 @@ chat.infer("hello")
 def generate_audio(text, temperature, top_P, top_K, audio_seed_input, text_seed_input, refine_text_flag, spk_emb=None):
 
     torch.manual_seed(audio_seed_input)
-    if not spk_emb:
+    if spk_emb is None:
         spk_emb = chat.sample_random_speaker()
 
     params_infer_code = {
