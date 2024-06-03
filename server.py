@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import base64
+import pickle
 from fastapi.middleware.gzip import GZipMiddleware
 
 app = FastAPI()
@@ -60,7 +61,7 @@ class TTSInput(BaseModel):
     audio_seed_input: int=2
     text_seed_input: int=2
     refine_text_flag: bool=True
-    spk_emb: bytes=None
+    spk_emb: str=""
 
 @app.post("/tts", response_class=JSONResponse)
 async def tts(input: TTSInput):
@@ -70,11 +71,11 @@ async def tts(input: TTSInput):
     try:
         # Use chatTTS to generate speech
         if input.spk_emb:
-            input.spk_emb = pickle.loads(input.spk_emb)
+            input.spk_emb = pickle.loads(base64.b64decode(input.spk_emb))
         sample_rate, spk_emb, wavs = generate_audio(**dict(input))
         
         return {"wavs": [base64.b64encode(wav.tobytes()).decode('utf-8') for wav in wavs],
-                "spk_emb": pickle.dumps(spk_emb), #.cpu().detach().numpy().tolist(),
+                "spk_emb": base64.b64encode(pickle.dumps(spk_emb)).decode('utf-8'), #.cpu().detach().numpy().tolist(),
                 "sample_rate": sample_rate}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
